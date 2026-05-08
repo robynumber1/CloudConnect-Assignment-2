@@ -1,31 +1,131 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <title>CloudConnect</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudConnect | Digital Board</title>
+    <style>
+        :root {
+            --primary: #0078d4;
+            --bg: #f4f4f9;
+            --text: #333;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 { color: var(--primary); text-align: center; margin-bottom: 1.5rem; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 2rem; }
+        input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            outline: none;
+        }
+        input:focus { border-color: var(--primary); }
+        button {
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background: #005a9e; }
+        ul { list-style: none; padding: 0; }
+        li {
+            background: #f9f9f9;
+            margin-bottom: 8px;
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 4px solid var(--primary);
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
 <body>
-    <h1>CloudConnect - Schwarzes Brett</h1>
-    <input type="text" id="msgInput" placeholder="Nachricht eingeben...">
-    <button onclick="postMessage()">Senden</button>
-    <ul id="msgList"></ul>
 
-    <script>
-        async function loadMessages() {
+<div class="container">
+    <h1>CloudConnect</h1>
+    
+    <div class="input-group">
+        <input type="text" id="msgInput" placeholder="Was gibt's Neues?">
+        <button onclick="postMessage()">Posten</button>
+    </div>
+
+    <div id="status" style="font-size: 0.8rem; color: #666; text-align: center; margin-bottom: 10px;"></div>
+    <ul id="msgList"></ul>
+</div>
+
+<script>
+    const statusDiv = document.getElementById('status');
+
+    async function loadMessages() {
+        try {
+            // Wir nutzen relative Pfade, damit das Gateway-Routing funktioniert
             const res = await fetch('/api/messages');
+            if (!res.ok) throw new Error('Fehler beim Laden');
             const data = await res.json();
             const list = document.getElementById('msgList');
-            list.innerHTML = data.map(m => `<li>${m.content}</li>`).join('');
+            
+            if (data.length === 0) {
+                list.innerHTML = '<li style="border:none; text-align:center; color:#999;">Noch keine Nachrichten vorhanden.</li>';
+            } else {
+                list.innerHTML = data.reverse().map(m => `<li>${m.content}</li>`).join('');
+            }
+            statusDiv.innerText = 'Synchronisiert';
+        } catch (err) {
+            console.error(err);
+            statusDiv.innerText = 'Fehler beim Laden der Daten.';
         }
-        async function postMessage() {
-            const text = document.getElementById('msgInput').value;
-            await fetch('/api/messages', {
+    }
+
+    async function postMessage() {
+        const input = document.getElementById('msgInput');
+        const text = input.value.trim();
+        
+        if (!text) return;
+
+        try {
+            statusDiv.innerText = 'Sende...';
+            const res = await fetch('/api/messages', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ text })
             });
-            loadMessages();
+
+            if (res.ok) {
+                input.value = '';
+                await loadMessages();
+            } else {
+                throw new Error('Senden fehlgeschlagen');
+            }
+        } catch (err) {
+            alert("Konnte Nachricht nicht senden. Prüfe die Verbindung.");
+            statusDiv.innerText = 'Fehler beim Senden.';
         }
-        loadMessages();
-    </script>
+    }
+
+    // Initiales Laden
+    loadMessages();
+    // Alle 10 Sekunden aktualisieren
+    setInterval(loadMessages, 10000);
+</script>
+
 </body>
 </html>
