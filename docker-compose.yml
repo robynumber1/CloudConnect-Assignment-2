@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: cloudconnect
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - cloud-net
+
+  backend:
+    build: ./app/backend
+    environment:
+      DB_HOST: db
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: cloudconnect
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cloud-net
+
+  frontend:
+    build: ./app/frontend
+    ports:
+      - "80:80"
+    networks:
+      - cloud-net
+
+networks:
+  cloud-net:
+    driver: bridge
+
+volumes:
+  db-data:
