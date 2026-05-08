@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <title>CloudConnect</title>
+</head>
+<body>
+    <h1>CloudConnect - Schwarzes Brett</h1>
+    <input type="text" id="msgInput" placeholder="Nachricht eingeben...">
+    <button onclick="postMessage()">Senden</button>
+    <ul id="msgList"></ul>
+
+    <script>
+        async function loadMessages() {
+            const res = await fetch('/api/messages');
+            const data = await res.json();
+            const list = document.getElementById('msgList');
+            list.innerHTML = data.map(m => `<li>${m.content}</li>`).join('');
+        }
+        async function postMessage() {
+            const text = document.getElementById('msgInput').value;
+            await fetch('/api/messages', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ text })
+            });
+            loadMessages();
+        }
+        loadMessages();
+    </script>
+</body>
+</html>
